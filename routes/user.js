@@ -150,8 +150,8 @@ userRouter.post('/login', async (req, res) => {
             } else {
                 // token有效期为7天
                 const token = jwt.sign({ _id: user._id }, 'passwordKey', { expiresIn: '7d' })
-                // 返回token和不包含密码的用户信息
-                res.status(200).json({ token, user: { name: user.name, email: user.email }, msg: 'Login successfully', status: true })
+                // 返回token和不包含密码的用户信息(包括id、name、email)
+                res.status(200).json({ token, user: { _id: user._id.toString(), name: user.name, email: user.email }, msg: 'Login successfully', status: true })
             }
         }
     } catch (e) {
@@ -172,7 +172,7 @@ userRouter.post('/verify_token', async (req, res) => {
                 // 刷新token有效期
                 const newToken = jwt.sign({ _id: decoded._id }, 'passwordKey', { expiresIn: '7d' })
                 // 返回token和用户信息
-                res.json({ token: newToken, user: { name: user.name, email: user.email }, msg: 'Token is valid and refreshed', status: true })
+                res.json({ token: newToken, user: { _id: user._id.toString(), name: user.name, email: user.email }, msg: 'Token is valid and refreshed', status: true })
             }
         } catch (e) {
             res.json({ msg: 'Invalid token', status: false })

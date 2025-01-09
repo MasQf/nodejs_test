@@ -1,8 +1,11 @@
 const express = require('express');
 const mongoose = require('mongoose');
 const socket = require('socket.io');
+const path = require('path');
 const userRouter = require('./routes/user');
-const Message = require('./models/message');
+const chatRouter = require('./routes/chat');
+const { sendMessage } = require('./services/chat');
+const uploadRouter = require('./routes/upload');
 
 const app = express();
 const PORT = 3000;
@@ -26,9 +29,12 @@ const io = socket(server, {
 // 连接数据库
 mongoose.connect(DB).then(() => console.log('MongoDB connected')).catch(err => console.log(err));
 
-// 解析 JSON 请求
 app.use(express.json());
 app.use(userRouter);
+app.use(chatRouter);
+app.use('/uploads', express.static(path.join(__dirname, 'public/uploads')));
+app.use(uploadRouter);
+
 
 // Socket.IO 连接事件
 io.on('connection', socket => {
@@ -42,22 +48,27 @@ io.on('connection', socket => {
 
     // 监听消息发送事件
     socket.on('sendMessage', async data => {
-        const { roomId, senderId, content, type } = data;
-        console.log(`Message received in room ${roomId}:`, data);
+        const { roomId, senderId, receiverId, content, type, time } = data;
+        console.log(`Message sent from ${senderId} to ${receiverId} in room ${roomId}:`, data);
 
-        // 保存消息到数据库
-        const message = new Message({ roomId, senderId, content, type });
-        await message.save();
-        console.log(`Message had save`);
+        try {
+            // 调用 sendMessage 函数保存消息并更新聊天会话
+            await sendMessage(roomId, senderId, receiverId, content, type, time);
 
-        // 广播消息到指定房间的其他用户
-        io.to(roomId).emit('receiveMessage', {
-            roomId,
-            senderId,
-            content,
-            type,
-            time: new Date()
-        });
+            // 广播消息到指定房间的其他用户
+            io.to(roomId).emit('receiveMessage', {
+                roomId,
+                senderId,
+                receiverId,
+                content,
+                type,
+                time: new Date().toISOString(),
+            });
+
+            console.log(`Message sent and chat updated`);
+        } catch (err) {
+            console.error(err);
+        }
     });
 
     // 监听用户断开连接
