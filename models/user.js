@@ -27,6 +27,10 @@ const userSchema = new mongoose.Schema({
             message: `Password must be at least 6 characters long, including lowercase letters, and numbers`
         },
     },
+    avatar: {
+        type: String,
+        default: '',
+    },
     state: {
         type: String,
         default: '',

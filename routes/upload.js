@@ -26,9 +26,11 @@ const fileFilter = (req, file, cb) => {
     if (allowedTypes.includes(file.mimetype)) {
         cb(null, true);
     } else {
+        console.error("不支持的文件类型:", file.mimetype);
         cb(new Error("Invalid file type. Only images and videos are allowed."));
     }
 };
+
 
 // 配置 multer
 const upload = multer({ storage, fileFilter });
@@ -36,7 +38,7 @@ const upload = multer({ storage, fileFilter });
 // 上传文件接口
 uploadRouter.post('/upload_file', upload.single('file'), (req, res) => {
     if (!req.file) {
-        return resjson({ msg: "No file uploaded.", status: false });
+        return res.json({ msg: "No valid file uploaded.", status: false });
     }
 
     const fileUrl = `${req.protocol}://${req.get("host")}/uploads/${req.file.filename}`;
