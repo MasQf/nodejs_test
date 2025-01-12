@@ -5,6 +5,7 @@ const path = require('path');
 const userRouter = require('./routes/user');
 const chatRouter = require('./routes/chat');
 const { sendMessage } = require('./services/chat');
+const Chat = require('./models/chat');
 const uploadRouter = require('./routes/upload');
 
 const app = express();
@@ -44,6 +45,23 @@ io.on('connection', socket => {
     socket.on('joinRoom', roomId => {
         socket.join(roomId); // 将用户加入指定房间
         console.log(`User joined room: ${roomId}`);
+    });
+
+    // 监听用户进入聊天详情页
+    socket.on('enterChatDetail', async (data) => {
+        const { roomId, userId } = data;  // 解构提取 roomId 和 userId
+        try {
+            // 重置该用户的未读消息数
+            await Chat.updateOne(
+                { roomId },
+                {
+                    $set: { [`unreadCount.${userId}`]: 0 },
+                }
+            );
+            console.log(`Reset unreadCount for user ${userId} in room ${roomId}`);
+        } catch (err) {
+            console.error(`Error resetting unreadCount: ${err.message}`);
+        }
     });
 
     // 监听消息发送事件

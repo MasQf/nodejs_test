@@ -17,9 +17,10 @@ const chatSchema = new mongoose.Schema({
         required: true,
     }, // 最近一条消息
     unreadCount: {
-        type: Number,
-        default: 0,
-    }, // 未读消息数量
+        type: Map,
+        of: Number,
+        default: {}, // 将 unreadCount 改为一个对象
+    }, // 每个参与者的未读消息数消息数量
     createdAt: {
         type: Date,
         default: Date.now,

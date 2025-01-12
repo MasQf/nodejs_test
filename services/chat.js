@@ -2,7 +2,6 @@
 const Message = require('../models/message');
 const Chat = require('../models/chat');
 
-// 将 sendMessage 单独导出
 const sendMessage = async (roomId, senderId, receiverId, content, type) => {
     try {
         // 保存消息到 Message 集合
@@ -26,7 +25,8 @@ const sendMessage = async (roomId, senderId, receiverId, content, type) => {
                     lastMessage: messageId, // 保存消息的 ObjectId
                 },
                 $addToSet: { participants: { $each: [senderId, receiverId] } }, // 添加参与者
-                $inc: { unreadCount: 1 }, // 未读消息数+1
+                // 只增加接收者的未读消息数
+                $inc: { [`unreadCount.${receiverId}`]: 1 }, // 只有接收者的未读消息数增加
             },
             { upsert: true, new: true } // 如果没有找到会话，则创建新的会话
         );
@@ -35,5 +35,6 @@ const sendMessage = async (roomId, senderId, receiverId, content, type) => {
         throw new Error('Internal server error');
     }
 };
+
 
 module.exports = { sendMessage };
