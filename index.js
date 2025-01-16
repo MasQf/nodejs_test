@@ -7,6 +7,7 @@ const chatRouter = require('./routes/chat');
 const { sendMessage } = require('./services/chat');
 const Chat = require('./models/chat');
 const uploadRouter = require('./routes/upload');
+const itemRouter = require('./routes/item');
 
 const app = express();
 const PORT = 3000;
@@ -35,6 +36,7 @@ app.use(userRouter);
 app.use(chatRouter);
 app.use('/uploads', express.static(path.join(__dirname, 'public/uploads')));
 app.use(uploadRouter);
+app.use(itemRouter);
 
 
 // Socket.IO 连接事件
