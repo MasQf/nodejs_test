@@ -30,6 +30,7 @@ const sendMessage = async (roomId, senderId, receiverId, content, type) => {
             },
             { upsert: true, new: true } // 如果没有找到会话，则创建新的会话
         );
+
     } catch (err) {
         console.error(err);
         throw new Error('Internal server error');

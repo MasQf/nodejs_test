@@ -1,5 +1,5 @@
+// 聊天列表项模型
 const mongoose = require('mongoose');
-const Message = require('./message');
 
 const chatSchema = new mongoose.Schema({
     roomId: {
@@ -19,8 +19,8 @@ const chatSchema = new mongoose.Schema({
     unreadCount: {
         type: Map,
         of: Number,
-        default: {}, // 将 unreadCount 改为一个对象
-    }, // 每个参与者的未读消息数消息数量
+        default: {},
+    }, // 每个参与者的未读消息数数量
     createdAt: {
         type: Date,
         default: Date.now,

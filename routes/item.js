@@ -36,22 +36,6 @@ itemRouter.post('/items_by_user', async (req, res) => {
     }
 });
 
-itemRouter.post('/items', async (req, res) => {
-    try {
-        const { userId } = req.body;
-        const items = await Item.find({ ownerId: userId }).populate('ownerId').lean();
-        // 将ownerId字段改为owner
-        const modifiedItems = items.map(item => {
-            item.owner = item.ownerId;
-            delete item.ownerId;
-            return item;
-        });
-        res.json({ items: modifiedItems, msg: '获取物品列表成功', status: true });
-    } catch (err) {
-        res.status(500).json({ msg: '获取物品列表失败', status: false });
-    }
-});
-
 // 获取最近发布的物品列表(前10个)
 itemRouter.get('/recent_items', async (req, res) => {
     try {

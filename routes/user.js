@@ -67,7 +67,7 @@ userRouter.post('/send_verification_code', async (req, res) => {
         res.status(200).json({ verificationCode: { email, code, createdAt, expiresAt, }, msg: 'Verification code sent successfully', status: true });
     } catch (e) {
         console.error(e);
-        res.status(500).json({ msg: 'Failed to send verification code', status: false });
+        res.json({ msg: 'Failed to send verification code', status: false });
     }
 });
 
@@ -131,7 +131,7 @@ userRouter.post('/register', async (req, res) => {
         res.status(200).json({ msg: 'User created successfully.', status: true });
     } catch (e) {
         console.error(e);
-        res.status(500).json({ msg: 'Server error.', status: false });
+        res.json({ msg: 'Server error.', status: false });
     }
 });
 
@@ -150,12 +150,12 @@ userRouter.post('/login', async (req, res) => {
             } else {
                 // token有效期为7天
                 const token = jwt.sign({ _id: user._id }, 'passwordKey', { expiresIn: '7d' })
-                // 返回token和不包含密码的用户信息(包括id、name、email、avatar)
-                res.status(200).json({ token, user: { _id: user._id.toString(), name: user.name, email: user.email, avatar: user.avatar }, msg: 'Login successfully', status: true })
+                // 返回token和不包含密码的用户信息(包括id、name、email、avatar、background)
+                res.status(200).json({ token, user: { _id: user._id.toString(), name: user.name, email: user.email, avatar: user.avatar, background: user.background }, msg: 'Login successfully', status: true })
             }
         }
     } catch (e) {
-        res.status(500).json({ msg: e.message })
+        res.json({ msg: e.message })
     }
 })
 
@@ -172,7 +172,7 @@ userRouter.post('/verify_token', async (req, res) => {
                 // 刷新token有效期
                 const newToken = jwt.sign({ _id: decoded._id }, 'passwordKey', { expiresIn: '7d' })
                 // 返回token和用户信息
-                res.json({ token: newToken, user: { _id: user._id.toString(), name: user.name, email: user.email, avatar: user.avatar }, msg: 'Token is valid and refreshed', status: true })
+                res.json({ token: newToken, user: { _id: user._id.toString(), name: user.name, email: user.email, avatar: user.avatar, background: user.background }, msg: 'Token is valid and refreshed', status: true })
             }
         } catch (e) {
             res.json({ msg: 'Invalid token', status: false })
@@ -215,7 +215,7 @@ userRouter.post('/reset_password', async (req, res) => {
         res.status(200).json({ msg: 'Password reset successfully', status: true });
     } catch (e) {
         console.error(e);
-        res.status(500).json({ msg: 'Failed to reset password', status: false });
+        res.json({ msg: 'Failed to reset password', status: false });
     }
 });
 
@@ -229,7 +229,21 @@ userRouter.post('/upload_avatar', async (req, res) => {
         res.status(200).json({ msg: 'Avatar uploaded successfully', status: true });
     } catch (e) {
         console.error(e);
-        res.status(500).json({ msg: 'Failed to upload avatar', status: false });
+        res.json({ msg: 'Failed to upload avatar', status: false });
+    }
+});
+
+// 上传背景图片
+userRouter.post('/upload_background', async (req, res) => {
+    try {
+        const { userId, background } = req.body;
+        const user = await User.findById(userId);
+        user.background = background;
+        await user.save();
+        res.status(200).json({ msg: 'Background uploaded successfully', status: true });
+    } catch (e) {
+        console.error(e);
+        res.json({ msg: 'Failed to upload background', status: false });
     }
 });
 
