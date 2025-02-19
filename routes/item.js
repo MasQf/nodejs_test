@@ -2,6 +2,8 @@
 const express = require('express');
 const itemRouter = express.Router();
 const Item = require('../models/item');
+const Favorite = require('../models/favorite');
+const authMiddleware = require('../middlewares/auth');
 
 // 获取物品列表
 itemRouter.get('/items', async (req, res) => {
@@ -20,13 +22,23 @@ itemRouter.get('/items', async (req, res) => {
 });
 
 // 根据物品id获取物品详情
-itemRouter.post('/item_detail', async (req, res) => {
+itemRouter.post('/item_detail', authMiddleware, async (req, res) => {
     try {
         const { itemId } = req.body;
+        const userId = req.userId;
+
         const item = await Item.findById(itemId).populate('ownerId').lean();
+        if (!item) {
+            return res.json({ msg: '物品不存在', status: false });
+        }
         // 将ownerId字段改为owner
         item.owner = item.ownerId;
         delete item.ownerId;
+
+        // 查询用户是否收藏该商品
+        const isFavorite = await Favorite.exists({ userId, itemId });
+        item.isFavorite = !!isFavorite;
+
         res.json({ item, msg: '获取物品详情成功', status: true });
     } catch (err) {
         res.json({ msg: '获取物品详情失败', status: false });
@@ -51,9 +63,9 @@ itemRouter.post('/published_items', async (req, res) => {
 });
 
 // 获取最近发布的物品列表(分页查询,默认page从1开始，pageSize默认值为10)
-itemRouter.get('/latest_items', async (req, res) => {
+itemRouter.post('/latest_items', async (req, res) => {
     try {
-        const { page = 1, pageSize = 10 } = req.query;
+        const { page = 1, pageSize = 10 } = req.body;
         const items = await Item.find().populate('ownerId').sort({ _id: -1 }).skip((page - 1) * pageSize).limit(parseInt(pageSize)).lean();
 
         const modifiedItems = items.map(item => {
@@ -68,9 +80,9 @@ itemRouter.get('/latest_items', async (req, res) => {
 });
 
 // 获取最多收藏的物品列表(分页查询)
-itemRouter.get('/favorites_items', async (req, res) => {
+itemRouter.post('/most_favorites_items', async (req, res) => {
     try {
-        const { page = 1, pageSize = 10 } = req.query;
+        const { page = 1, pageSize = 10 } = req.body;
         const items = await Item.find().sort({ favoritesCount: -1 }).populate('ownerId').skip((page - 1) * pageSize).limit(parseInt(pageSize)).lean();
 
         const modifiedItems = items.map(item => {
@@ -85,9 +97,9 @@ itemRouter.get('/favorites_items', async (req, res) => {
 });
 
 // 获取最多浏览的物品列表(分页查询)
-itemRouter.get('/views_items', async (req, res) => {
+itemRouter.post('/most_views_items', async (req, res) => {
     try {
-        const { page = 1, pageSize = 10 } = req.query;
+        const { page = 1, pageSize = 10 } = req.body;
         const items = await Item.find().sort({ views: -1 }).populate('ownerId').skip((page - 1) * pageSize).limit(parseInt(pageSize)).lean();
 
         const modifiedItems = items.map(item => {
@@ -141,14 +153,71 @@ itemRouter.post('/publish', async (req, res) => {
     }
 });
 
+// 用户收藏物品，收藏数+1
+itemRouter.post('/favorite', authMiddleware, async (req, res) => {
+    try {
+        const { itemId } = req.body;
+        const userId = req.userId;
+
+        // 1. 检查用户是否已经收藏该物品
+        const existingFavorite = await Favorite.exists({ userId, itemId });
+        if (existingFavorite) {
+            return res.json({ msg: '你已经收藏过该物品了', status: false });
+        }
+
+        // 2. 更新物品的收藏数 +1
+        await Item.findByIdAndUpdate(
+            itemId,
+            { $inc: { favoritesCount: 1 } }, // 收藏数加 1
+            { timestamps: false } // 禁用 timestamps 更新
+        );
+
+        // 3. 保存新的 favorite 记录
+        const newFavorite = new Favorite({ userId, itemId });
+        await newFavorite.save();
+
+        res.json({ msg: '收藏成功', status: true });
+    } catch (err) {
+        res.json({ msg: '收藏失败', status: false });
+    }
+});
+
+// 用户取消收藏物品，收藏数-1
+itemRouter.post('/unFavorite', authMiddleware, async (req, res) => {
+    try {
+        const { itemId } = req.body;
+        const userId = req.userId;
+
+        // 1. 删除 Favorite 集合中的收藏记录
+        await Favorite.findOneAndDelete({ userId, itemId });
+
+        // 2. 更新物品的收藏数 -1
+        await Item.findByIdAndUpdate(
+            itemId,
+            { $inc: { favoritesCount: -1 } },
+            { timestamps: false }
+        );
+
+        res.json({ msg: '取消收藏成功', status: true });
+    } catch (err) {
+        res.json({ msg: '取消收藏失败', status: false });
+    }
+});
+
+
 // 用户进入物品详情页，浏览数+1
 itemRouter.post('/view', async (req, res) => {
     try {
         const { itemId } = req.body;
-        const item = await Item.findById(itemId);
-        item.views++;
-        await item.save();
-        res.json({ msg: '浏览数+1', status: true });
+
+        // 使用 $inc 增加 views，并禁用 timestamps 更新
+        await Item.findByIdAndUpdate(
+            itemId,
+            { $inc: { views: 1 } }, // views 加 1
+            { timestamps: false } // 禁用 timestamps 更新
+        );
+
+        res.json({ msg: '浏览数+1成功', status: true });
     } catch (err) {
         res.json({ msg: '浏览数+1失败', status: false });
     }
