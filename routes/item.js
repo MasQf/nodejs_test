@@ -62,11 +62,11 @@ itemRouter.post('/published_items', async (req, res) => {
     }
 });
 
-// 获取最近发布的物品列表(分页查询,默认page从1开始，pageSize默认值为10)
+// 获取最近发布的物品列表(分页查询,默认page从1开始，size默认值为10)
 itemRouter.post('/latest_items', async (req, res) => {
     try {
-        const { page = 1, pageSize = 10 } = req.body;
-        const items = await Item.find().populate('ownerId').sort({ _id: -1 }).skip((page - 1) * pageSize).limit(parseInt(pageSize)).lean();
+        const { page = 1, size = 10 } = req.body;
+        const items = await Item.find().populate('ownerId').sort({ _id: -1 }).skip((page - 1) * size).limit(parseInt(size)).lean();
 
         const modifiedItems = items.map(item => {
             item.owner = item.ownerId;
@@ -82,8 +82,8 @@ itemRouter.post('/latest_items', async (req, res) => {
 // 获取最多收藏的物品列表(分页查询)
 itemRouter.post('/most_favorites_items', async (req, res) => {
     try {
-        const { page = 1, pageSize = 10 } = req.body;
-        const items = await Item.find().sort({ favoritesCount: -1 }).populate('ownerId').skip((page - 1) * pageSize).limit(parseInt(pageSize)).lean();
+        const { page = 1, size = 10 } = req.body;
+        const items = await Item.find().sort({ favoritesCount: -1 }).populate('ownerId').skip((page - 1) * size).limit(parseInt(size)).lean();
 
         const modifiedItems = items.map(item => {
             item.owner = item.ownerId;
@@ -99,8 +99,8 @@ itemRouter.post('/most_favorites_items', async (req, res) => {
 // 获取最多浏览的物品列表(分页查询)
 itemRouter.post('/most_views_items', async (req, res) => {
     try {
-        const { page = 1, pageSize = 10 } = req.body;
-        const items = await Item.find().sort({ views: -1 }).populate('ownerId').skip((page - 1) * pageSize).limit(parseInt(pageSize)).lean();
+        const { page = 1, size = 10 } = req.body;
+        const items = await Item.find().sort({ views: -1 }).populate('ownerId').skip((page - 1) * size).limit(parseInt(size)).lean();
 
         const modifiedItems = items.map(item => {
             item.owner = item.ownerId;
@@ -204,12 +204,36 @@ itemRouter.post('/unFavorite', authMiddleware, async (req, res) => {
     }
 });
 
+// 收藏列表
+itemRouter.post('/favorites', authMiddleware, async (req, res) => {
+    try {
+        const userId = req.userId;
+        const { page = 1, size = 10 } = req.body;
+        const favorites = await Favorite.find({ userId }).sort({ _id: -1 }).populate({
+            path: 'itemId',
+            populate: { path: 'ownerId' }
+        }).skip((page - 1) * size).limit(parseInt(size)).lean();
+
+        // 将itemId字段改为item 以及 将ownerId字段改为owner
+        const modifiedFavorites = favorites.map(favorite => {
+            favorite.item = favorite.itemId;
+            favorite.item.owner = favorite.item.ownerId;
+            delete favorite.itemId;
+            delete favorite.item.ownerId;
+            return favorite;
+        });
+
+        res.json({ favorites: modifiedFavorites, msg: '获取收藏列表成功', status: true });
+    } catch (err) {
+        res.json({ msg: '获取收藏列表失败', status: false });
+    }
+});
 
 // 用户进入物品详情页，浏览数+1
 itemRouter.post('/view', async (req, res) => {
     try {
         const { itemId } = req.body;
-
+        shan
         // 使用 $inc 增加 views，并禁用 timestamps 更新
         await Item.findByIdAndUpdate(
             itemId,
