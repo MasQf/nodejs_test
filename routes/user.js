@@ -247,6 +247,29 @@ userRouter.post('/upload_background', async (req, res) => {
     }
 });
 
+// 修改用户名
+userRouter.post('/update_username', async (req, res) => {
+    try {
+        const { userId, name } = req.body;
 
+        // 验证名称不为空
+        if (!name || !name.trim()) {
+            return res.json({ msg: 'Username cannot be empty', status: false });
+        }
+
+        const user = await User.findById(userId);
+        if (!user) {
+            return res.json({ msg: 'User not found', status: false });
+        }
+
+        user.name = name;
+        await user.save();
+
+        res.status(200).json({ msg: 'Username updated successfully', status: true });
+    } catch (e) {
+        console.error(e);
+        res.json({ msg: 'Failed to update username', status: false });
+    }
+});
 
 module.exports = userRouter

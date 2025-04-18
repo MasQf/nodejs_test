@@ -6,6 +6,7 @@ const userRouter = require('./routes/user');
 const chatRouter = require('./routes/chat');
 const uploadRouter = require('./routes/upload');
 const itemRouter = require('./routes/item');
+const tradeRouter = require('./routes/trade');
 const setupChatSocket = require('./sockets/chat');
 
 const app = express();
@@ -33,6 +34,7 @@ app.use(chatRouter);
 app.use('/uploads', express.static(path.join(__dirname, 'public/uploads')));
 app.use(uploadRouter);
 app.use(itemRouter);
+app.use(tradeRouter);
 
 // 初始化 Socket.IO
 setupChatSocket(io);

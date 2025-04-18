@@ -216,15 +216,20 @@ itemRouter.post('/favorites', authMiddleware, async (req, res) => {
 
         // 将itemId字段改为item 以及 将ownerId字段改为owner
         const modifiedFavorites = favorites.map(favorite => {
-            favorite.item = favorite.itemId;
-            favorite.item.owner = favorite.item.ownerId;
-            delete favorite.itemId;
-            delete favorite.item.ownerId;
+            if (favorite.itemId) {
+                favorite.item = favorite.itemId;
+                favorite.item.owner = favorite.itemId.ownerId || null;
+                delete favorite.itemId;
+                if (favorite.item.owner) {
+                    delete favorite.item.ownerId;
+                }
+            }
             return favorite;
         });
 
         res.json({ favorites: modifiedFavorites, msg: '获取收藏列表成功', status: true });
     } catch (err) {
+        console.error(err); // 打印错误日志以便调试
         res.json({ msg: '获取收藏列表失败', status: false });
     }
 });
@@ -233,7 +238,7 @@ itemRouter.post('/favorites', authMiddleware, async (req, res) => {
 itemRouter.post('/view', async (req, res) => {
     try {
         const { itemId } = req.body;
-        shan
+
         // 使用 $inc 增加 views，并禁用 timestamps 更新
         await Item.findByIdAndUpdate(
             itemId,
@@ -244,6 +249,36 @@ itemRouter.post('/view', async (req, res) => {
         res.json({ msg: '浏览数+1成功', status: true });
     } catch (err) {
         res.json({ msg: '浏览数+1失败', status: false });
+    }
+});
+
+// 删除物品
+itemRouter.post('/delete', async (req, res) => {
+    try {
+        const { itemId } = req.body;
+
+        await Item.findByIdAndDelete(itemId);
+
+        res.json({ msg: '物品删除成功', status: true });
+    } catch (err) {
+        res.json({ msg: '物品删除失败', status: false });
+    }
+});
+
+// 模糊搜索物品
+itemRouter.post('/search', async (req, res) => {
+    try {
+        const { keyword } = req.body;
+        const items = await Item.find({ name: { $regex: keyword, $options: 'i' } }).populate('ownerId').lean();
+        // 将ownerId字段改为owner
+        const modifiedItems = items.map(item => {
+            item.owner = item.ownerId;
+            delete item.ownerId;
+            return item;
+        });
+        res.json({ items: modifiedItems, msg: '模糊搜索物品成功', status: true });
+    } catch (err) {
+        res.json({ msg: '模糊搜索物品失败', status: false });
     }
 });
 
